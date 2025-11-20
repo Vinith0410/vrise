@@ -31,7 +31,7 @@ const formSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100, "Name must be less than 100 characters"),
   email: z.string().trim().email("Please enter a valid email address").max(255, "Email must be less than 255 characters"),
   mobile: z.string().trim().regex(/^[0-9]{10}$/, "Please enter a valid 10-digit mobile number"),
-  stack: z.string().min(1, "Please select an interview stack"),
+  stack: z.string().min(1, "Please enter your interview stack"),
   experience: z.string().min(1, "Please select your experience level"),
 });
 
@@ -40,6 +40,7 @@ type FormData = z.infer<typeof formSchema>;
 const MockInterview = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [selectedExperience, setSelectedExperience] = useState<string>("");
   const { toast } = useToast();
 
   const {
@@ -83,14 +84,20 @@ const MockInterview = () => {
         };
       }
 
-      await postJson("/mock-interviews", { ...data, resume: resumePayload });
+      const resp = await postJson<{ emailSent?: boolean }>("/mock-interviews", { ...data, resume: resumePayload });
       setShowDialog(true);
-      reset();
+      reset({ name: "", email: "", mobile: "", stack: "", experience: "" });
       setResumeFile(null);
+      setSelectedExperience("");
+      localStorage.removeItem("mockInterviewForm");
       toast({
         title: "Application submitted!",
         description: "Interview slot will be sent to your email.",
       });
+      const emailSent = resp?.data?.emailSent;
+      if (emailSent === false) {
+        toast({ title: "Enter a valid mail", description: "Email was not delivered. Please check your email address.", variant: "destructive" });
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to submit your request right now.";
       toast({ title: "Submission failed", description: message, variant: "destructive" });
@@ -229,19 +236,13 @@ const MockInterview = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="stack">Preferred Interview Stack *</Label>
-                  <Select onValueChange={(value) => setValue("stack", value, { shouldValidate: true })}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select your interview stack" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {stacks.map((stack) => (
-                        <SelectItem key={stack} value={stack}>
-                          {stack}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="stack">Preferred Interview Stack (you can type your own) *</Label>
+                  <Input
+                    id="stack"
+                    {...register("stack")}
+                    placeholder="Enter your preferred stack (e.g., React, Node.js, Java)"
+                    className="mt-2"
+                  />
                   {errors.stack && (
                     <p className="text-destructive text-sm mt-1">{errors.stack.message}</p>
                   )}
@@ -249,7 +250,7 @@ const MockInterview = () => {
 
                 <div>
                   <Label htmlFor="experience">Experience Level *</Label>
-                  <Select onValueChange={(value) => setValue("experience", value, { shouldValidate: true })}>
+                  <Select value={selectedExperience || undefined} onValueChange={(value) => { setSelectedExperience(value); setValue("experience", value, { shouldValidate: true }); }}>
                     <SelectTrigger className="mt-2">
                       <SelectValue placeholder="Select your experience level" />
                     </SelectTrigger>

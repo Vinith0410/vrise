@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -35,7 +35,7 @@ const formSchema = z.object({
   domain: z.string().min(1, "Please select a domain"),
   college: z.string().trim().min(2, "Please enter your college name").max(200, "College name must be less than 200 characters"),
   year: z.string().min(1, "Please select your year"),
-  reason: z.string().trim().min(50, "Please provide at least 50 characters explaining your interest").max(1000, "Reason must be less than 1000 characters"),
+  reason: z.string().trim().max(1000, "Reason must be less than 1000 characters").optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -43,8 +43,11 @@ type FormData = z.infer<typeof formSchema>;
 const Internships = () => {
   const [showDialog, setShowDialog] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState<string>("");
+  const [selectedYear, setSelectedYear] = useState<string>("");
   const { toast } = useToast();
   const formRef = useRef<HTMLDivElement | null>(null);
+
+  const LS_KEY = "internship_form";
 
   const {
     register,
@@ -52,6 +55,7 @@ const Internships = () => {
     formState: { errors, isSubmitting },
     setValue,
     reset,
+    watch,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -65,16 +69,55 @@ const Internships = () => {
     },
   });
 
+  // Preload saved values on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as Partial<FormData>;
+        reset({
+          name: saved.name ?? "",
+          email: saved.email ?? "",
+          mobile: saved.mobile ?? "",
+          domain: saved.domain ?? "",
+          college: saved.college ?? "",
+          year: saved.year ?? "",
+          reason: saved.reason ?? "",
+        });
+        setSelectedDomain(saved.domain ?? "");
+        setSelectedYear(saved.year ?? "");
+      }
+    } catch {}
+  }, [reset]);
+
+  // Persist any changes to localStorage
+  useEffect(() => {
+    const subscription = watch((values) => {
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(values));
+      } catch {}
+    });
+    return () => subscription.unsubscribe?.();
+  }, [watch]);
+
   const onSubmit = async (data: FormData) => {
     try {
-      await postJson("/internships/applications", data);
+      const res = await postJson("/internships/applications", data);
       setShowDialog(true);
       toast({
         title: "Application submitted!",
         description: "Our team will contact you soon.",
       });
-      reset();
+      // Warn if email was not sent by backend
+      const emailSent = (res as any)?.data?.emailSent;
+      if (emailSent === false) {
+        toast({ title: "Enter a valid mail", description: "We could not send a confirmation email.", variant: "destructive" });
+      }
+      // Reset the form and clear persisted values after successful submit
+      localStorage.removeItem(LS_KEY);
+      reset({ name: "", email: "", mobile: "", domain: "", college: "", year: "", reason: "" });
       setSelectedDomain("");
+      setSelectedYear("");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to submit your application right now.";
       toast({ title: "Submission failed", description: message, variant: "destructive" });
@@ -463,7 +506,7 @@ const Internships = () => {
 
                   <div>
                     <Label htmlFor="year">Year of Study *</Label>
-                    <Select onValueChange={(value) => setValue("year", value, { shouldValidate: true })}>
+                    <Select value={selectedYear || undefined} onValueChange={(value) => { setSelectedYear(value); setValue("year", value, { shouldValidate: true }); }}>
                       <SelectTrigger className="mt-2">
                         <SelectValue placeholder="Select year" />
                       </SelectTrigger>
@@ -482,11 +525,11 @@ const Internships = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="reason">Why do you want this internship? *</Label>
+                  <Label htmlFor="reason">Why do you want this internship? (optional)</Label>
                   <Textarea
                     id="reason"
                     {...register("reason")}
-                    placeholder="Tell us about your goals, interests, and what you hope to learn..."
+                    placeholder="You can share your goals or skip this section"
                     className="mt-2 min-h-32"
                   />
                   {errors.reason && (

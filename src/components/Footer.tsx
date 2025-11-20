@@ -47,15 +47,15 @@ const Footer = () => {
             <ul className="space-y-3">
               <li className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Mail className="w-4 h-4" />
-                <span>info@vrisetechno.com</span>
+                <span>vrisetechnogroup@gmail.com</span>
               </li>
               <li className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <Phone className="w-4 h-4" />
-                <span>+91 98765 43210</span>
+                <span>9626843930</span>
               </li>
               <li className="flex items-center space-x-2 text-sm text-muted-foreground">
                 <MapPin className="w-4 h-4" />
-                <span>Bangalore, India</span>
+                <span>Karur, Tamil Nadu</span>
               </li>
             </ul>
             <div className="flex space-x-4 mt-4">

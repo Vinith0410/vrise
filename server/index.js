@@ -3,8 +3,16 @@ import cors from "cors";
 import mongoose from "mongoose";
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
 
 dotenv.config();
+
+// Resolve __dirname in ESM and compute dist path
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const distPath = path.resolve(__dirname, "..", "dist");
 
 const {
   PORT = 4000,
@@ -16,11 +24,15 @@ const {
   CLIENT_ORIGIN = "http://localhost:5173",
 } = process.env;
 
+// Enable/disable email sending (set EMAIL_ENABLED=false in .env for local dev)
+const EMAIL_ALLOW_SELF_SIGNED = (process.env.EMAIL_ALLOW_SELF_SIGNED ?? "false").toLowerCase() === "true";
+const EMAIL_ENABLED = (process.env.EMAIL_ENABLED ?? "true").toLowerCase() !== "false";
+
 if (!MONGODB_URI) {
   throw new Error("Missing MONGODB_URI in environment");
 }
 
-if (!EMAIL_USER || !EMAIL_PASSWORD || !EMAIL_FROM || !NOTIFY_EMAIL) {
+if (EMAIL_ENABLED && (!EMAIL_USER || !EMAIL_PASSWORD || !EMAIL_FROM || !NOTIFY_EMAIL)) {
   throw new Error("Missing email configuration (EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM, NOTIFY_EMAIL)");
 }
 
@@ -40,36 +52,55 @@ mongoose
     process.exit(1);
   });
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASSWORD,
-  },
-});
+// Conditionally create the transporter only when emails are enabled
+const transporter = EMAIL_ENABLED
+  ? nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
+      tls: EMAIL_ALLOW_SELF_SIGNED ? { rejectUnauthorized: false } : undefined,
+    })
+  : null;
 
-const sendEmail = async ({ to, subject, html, attachments = [] }) =>
-  transporter.sendMail({
+const sendEmail = async ({ to, subject, html, attachments = [] }) => {
+  if (!EMAIL_ENABLED || !transporter) {
+    console.log("[email:disabled] would send:", { to, subject });
+    return;
+  }
+
+  return transporter.sendMail({
     from: EMAIL_FROM,
     to,
     subject,
     html,
     attachments,
   });
+};
 
 const sendAcknowledgementEmails = async ({ userEmail, subject, message, attachments = [] }) => {
-  await sendEmail({
-    to: userEmail,
-    subject,
-    html: message,
-  });
+  // Return a boolean indicating whether emails were actually sent
+  if (!EMAIL_ENABLED || !transporter) {
+    // Email disabled in env
+    return false;
+  }
+  try {
+    await sendEmail({
+      to: userEmail,
+      subject,
+      html: message,
+    });
 
-  await sendEmail({
-    to: NOTIFY_EMAIL,
-    subject: `[Admin Copy] ${subject}`,
-    html: message,
-    attachments,
-  });
+    await sendEmail({
+      to: NOTIFY_EMAIL,
+      subject: `[Admin Copy] ${subject}`,
+      html: message,
+      attachments,
+    });
+
+    return true;
+  } catch (err) {
+    console.warn("Email sending failed:", err);
+    return false; // Do not throw to avoid breaking API responses
+  }
 };
 
 const baseRequiredString = {
@@ -131,13 +162,31 @@ const Feedback = mongoose.model("Feedback", feedbackSchema);
 
 const formatHtmlList = (title, items) => {
   const rows = Object.entries(items)
-    .map(([key, value]) => `<li><strong>${key}:</strong> ${value ?? "N/A"}</li>`)
+    .map(([key, value]) => `<li><strong>${key}:</strong> ${value ?? "N/A"}</li>`) 
     .join("");
   return `<h2>${title}</h2><ul>${rows}</ul>`;
 };
 
+// Friendly user email templates
+const userEmailTemplates = {
+  internship: ({ name, domain }) => `
+    <h1>Thank you, ${name}!</h1>
+    <p>Your ${domain} internship application has been received and is under review.</p>
+    <p>Fees and timing details will be shared by our team soon. We will contact you shortly with next steps.</p>
+  `,
+  mockInterview: ({ name, stack }) => `
+    <h1>Mock Interview Booking Confirmed</h1>
+    <p>Hi ${name}, your mock interview for ${stack} has been booked.</p>
+    <p>Payment and timing details will be shared by our team soon. You will receive a confirmation email shortly.</p>
+  `,
+  feedback: ({ name }) => `
+    <h1>Thanks for your feedback</h1>
+    <p>Dear ${name}, we appreciate you taking the time to share your feedback. It helps us improve.</p>
+  `,
+};
+
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: Date.now() });
+  res.json({ success: true, message: "OK" });
 });
 
 app.post("/api/internships/applications", async (req, res) => {
@@ -158,7 +207,7 @@ app.post("/api/internships/applications", async (req, res) => {
       reason,
     });
 
-    const summary = formatHtmlList("Internship Application Received", {
+    const summary = formatHtmlList("Internship Application Details", {
       Name: name,
       Email: email,
       Mobile: mobile,
@@ -168,13 +217,15 @@ app.post("/api/internships/applications", async (req, res) => {
       Reason: reason,
     });
 
-    await sendAcknowledgementEmails({
+    const messageHtml = `${userEmailTemplates.internship({ name, domain })}${summary}`;
+
+    const emailSent = await sendAcknowledgementEmails({
       userEmail: email,
       subject: `Thanks for applying for the ${domain} internship`,
-      message: summary,
+      message: messageHtml,
     });
 
-    res.json({ success: true, message: "Application stored successfully.", data: { id: application._id } });
+    res.json({ success: true, message: "Application stored successfully.", data: { id: application._id, emailSent } });
   } catch (error) {
     console.error("Internship application error:", error);
     res.status(500).json({ success: false, message: "Failed to save application." });
@@ -208,7 +259,7 @@ app.post("/api/mock-interviews", async (req, res) => {
       resume: resumePayload,
     });
 
-    const summary = formatHtmlList("Mock Interview Booking Received", {
+    const summary = formatHtmlList("Mock Interview Booking Details", {
       Name: name,
       Email: email,
       Mobile: mobile,
@@ -227,14 +278,16 @@ app.post("/api/mock-interviews", async (req, res) => {
           ]
         : [];
 
-    await sendAcknowledgementEmails({
+    const messageHtml = `${userEmailTemplates.mockInterview({ name, stack })}${summary}`;
+
+    const emailSent = await sendAcknowledgementEmails({
       userEmail: email,
       subject: `Mock interview booking confirmed for ${stack}`,
-      message: summary,
+      message: messageHtml,
       attachments,
     });
 
-    res.json({ success: true, message: "Mock interview stored successfully.", data: { id: booking._id } });
+    res.json({ success: true, message: "Mock interview stored successfully.", data: { id: booking._id, emailSent } });
   } catch (error) {
     console.error("Mock interview booking error:", error);
     res.status(500).json({ success: false, message: "Failed to save mock interview booking." });
@@ -257,7 +310,7 @@ app.post("/api/feedback", async (req, res) => {
       message,
     });
 
-    const summary = formatHtmlList("Feedback Received", {
+    const summary = formatHtmlList("Feedback Details", {
       Name: name,
       Email: email,
       "Feedback Type": feedbackType,
@@ -265,19 +318,33 @@ app.post("/api/feedback", async (req, res) => {
       Message: message,
     });
 
-    await sendAcknowledgementEmails({
+    const messageHtml = `${userEmailTemplates.feedback({ name })}${summary}`;
+
+    const emailSent = await sendAcknowledgementEmails({
       userEmail: email,
       subject: "Thanks for sharing your feedback",
-      message: summary,
+      message: messageHtml,
     });
 
-    res.json({ success: true, message: "Feedback stored successfully.", data: { id: feedback._id } });
+    res.json({ success: true, message: "Feedback stored successfully.", data: { id: feedback._id, emailSent } });
   } catch (error) {
     console.error("Feedback error:", error);
     res.status(500).json({ success: false, message: "Failed to save feedback." });
   }
 });
 
+// Serve frontend build if present (production) BEFORE 404
+if (fs.existsSync(distPath)) {
+  // Static assets
+  app.use(express.static(distPath));
+  // SPA fallback for non-API routes
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
+
+// 404 handler (keep after SPA fallback)
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });

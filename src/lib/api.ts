@@ -4,7 +4,7 @@ type ApiResponse<T = undefined> = {
   data?: T;
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
 
 export async function postJson<T = undefined>(endpoint: string, payload: unknown): Promise<ApiResponse<T>> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
