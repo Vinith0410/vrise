@@ -15,7 +15,7 @@ const __dirname = path.dirname(__filename);
 const distPath = path.resolve(__dirname, "..", "dist");
 
 const {
-  PORT = 4000,
+  PORT = 5000,
   MONGODB_URI,
   EMAIL_USER,
   EMAIL_PASSWORD,
@@ -43,6 +43,14 @@ app.use(
   }),
 );
 app.use(express.json({ limit: "15mb" }));
+
+// Correct path for Render + your folder structure
+app.use(express.static(path.join(__dirname, "..", "dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "dist", "index.html"));
+});
+
 
 mongoose
   .connect(MONGODB_URI, { autoIndex: true })
@@ -162,12 +170,12 @@ const Feedback = mongoose.model("Feedback", feedbackSchema);
 
 const formatHtmlList = (title, items) => {
   const rows = Object.entries(items)
-    .map(([key, value]) => `<li><strong>${key}:</strong> ${value ?? "N/A"}</li>`) 
+    .map(([key, value]) => `<li><strong>${key}:</strong> ${value ?? "N/A"}</li>`)
     .join("");
   return `<h2>${title}</h2><ul>${rows}</ul>`;
 };
 
-// Friendly user email templates
+// Frie ndly user email templates
 const userEmailTemplates = {
   internship: ({ name, domain }) => `
     <h1>Thank you, ${name}!</h1>
@@ -333,6 +341,15 @@ app.post("/api/feedback", async (req, res) => {
   }
 });
 
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: "Route not found" });
+});
+
+app.use((error, _req, res, _next) => {
+  console.error("Unexpected error:", error);
+  res.status(500).json({ success: false, message: "Internal server error" });
+});
+
 // Serve frontend build if present (production) BEFORE 404
 if (fs.existsSync(distPath)) {
   // Static assets
@@ -349,12 +366,16 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });
 
-app.use((error, _req, res, _next) => {
-  console.error("Unexpected error:", error);
-  res.status(500).json({ success: false, message: "Internal server error" });
-});
-
 app.listen(PORT, () => {
   console.log(`🚀 API server ready on http://localhost:${PORT}`);
 });
+
+// Frontend serving configured above (removed duplicate)
+// if (fs.existsSync(distPath)) {
+//   app.use(express.static(distPath));
+//   app.get("*", (req, res, next) => {
+//     if (req.path.startsWith("/api")) return next();
+//     res.sendFile(path.join(distPath, "index.html"));
+//   });
+// }
 

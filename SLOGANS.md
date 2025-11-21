@@ -1,7 +1,7 @@
 # V Rise Techno Group - Slogan Variations
 
 ## Main Slogan
-**"We Build. You Rise."**
+**"We Build. Your Rise."**
 
 ## Additional Slogan Variations
 
