@@ -51,30 +51,37 @@ app.use(
 );
 app.use(express.json({ limit: "15mb" }));
 
-// Middleware to set proper MIME types for all files
-app.use((req, res, next) => {
-  const ext = path.extname(req.path).toLowerCase();
-
-  // Set MIME type based on file extension
-  if (ext === '.js' || ext === '.mjs') {
-    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-  } else if (ext === '.css') {
-    res.setHeader('Content-Type', 'text/css; charset=utf-8');
-  } else if (ext === '.json') {
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  } else if (ext === '.svg') {
-    res.setHeader('Content-Type', 'image/svg+xml');
-  } else if (ext === '.wasm') {
-    res.setHeader('Content-Type', 'application/wasm');
-  }
-
-  next();
-});
-
-// Serve static files
+// Serve static files with explicit MIME types
 const staticPath = path.join(__dirname, "..", "dist");
 console.log(`📁 Serving static files from: ${staticPath}`);
-app.use(express.static(staticPath));
+
+app.use(express.static(staticPath, {
+  setHeaders: (res, filepath) => {
+    const ext = path.extname(filepath).toLowerCase();
+
+    // Explicitly set MIME types
+    if (ext === '.js' || ext === '.mjs') {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    } else if (ext === '.css') {
+      res.setHeader('Content-Type', 'text/css; charset=utf-8');
+    } else if (ext === '.json') {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    } else if (ext === '.svg') {
+      res.setHeader('Content-Type', 'image/svg+xml');
+    } else if (ext === '.wasm') {
+      res.setHeader('Content-Type', 'application/wasm');
+    } else if (ext === '.html') {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    }
+
+    // Add cache headers for assets
+    if (filepath.includes('/assets/')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (ext === '.html') {
+      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+    }
+  }
+}));
 
 // Catch-all route for SPA - serve index.html for all routes
 app.get("*", (req, res) => {
