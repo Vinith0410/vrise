@@ -55,30 +55,38 @@ app.use(express.json({ limit: "15mb" }));
 const staticPath = path.join(__dirname, "..", "dist");
 console.log(`📁 Serving static files from: ${staticPath}`);
 
+// IMPORTANT: Set MIME types in middleware BEFORE express.static
+app.use((req, res, next) => {
+  // Force MIME type headers - this ensures they're never overridden
+  const ext = path.extname(req.path).toLowerCase();
+
+  if (ext === '.js' || ext === '.mjs') {
+    res.set('Content-Type', 'application/javascript; charset=utf-8');
+  } else if (ext === '.css') {
+    res.set('Content-Type', 'text/css; charset=utf-8');
+  } else if (ext === '.json') {
+    res.set('Content-Type', 'application/json; charset=utf-8');
+  } else if (ext === '.wasm') {
+    res.set('Content-Type', 'application/wasm');
+  } else if (ext === '.svg') {
+    res.set('Content-Type', 'image/svg+xml');
+  }
+
+  next();
+});
+
+// Serve static files with cache control
 app.use(express.static(staticPath, {
+  maxAge: '1d',
+  etag: false,
   setHeaders: (res, filepath) => {
     const ext = path.extname(filepath).toLowerCase();
 
-    // Explicitly set MIME types
-    if (ext === '.js' || ext === '.mjs') {
-      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    } else if (ext === '.css') {
-      res.setHeader('Content-Type', 'text/css; charset=utf-8');
-    } else if (ext === '.json') {
-      res.setHeader('Content-Type', 'application/json; charset=utf-8');
-    } else if (ext === '.svg') {
-      res.setHeader('Content-Type', 'image/svg+xml');
-    } else if (ext === '.wasm') {
-      res.setHeader('Content-Type', 'application/wasm');
-    } else if (ext === '.html') {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    }
-
-    // Add cache headers for assets
+    // Cache headers
     if (filepath.includes('/assets/')) {
-      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
     } else if (ext === '.html') {
-      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      res.set('Cache-Control', 'public, max-age=0, must-revalidate');
     }
   }
 }));
@@ -91,7 +99,7 @@ app.get("*", (req, res) => {
     return res.status(404).send(`index.html not found at ${indexPath}`);
   }
 
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.set('Content-Type', 'text/html; charset=utf-8');
   res.sendFile(indexPath);
 });
 
