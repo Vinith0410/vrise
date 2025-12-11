@@ -107,12 +107,20 @@ mongoose
     process.exit(1);
   });
 
-// Conditionally create the transporter only when emails are enabled
+// Nodemailer transporter - using explicit SMTP config for better VPS compatibility
 const transporter = EMAIL_ENABLED
   ? nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: EMAIL_USER, pass: EMAIL_PASSWORD },
-      tls: EMAIL_ALLOW_SELF_SIGNED ? { rejectUnauthorized: false } : undefined,
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false, // use TLS, not SSL
+      auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASSWORD, // Gmail App Password
+      },
+      tls: {
+        rejectUnauthorized: EMAIL_ALLOW_SELF_SIGNED ? false : true,
+        ciphers: "SSLv3",
+      },
     })
   : null;
 
