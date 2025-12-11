@@ -44,8 +44,16 @@ app.use(
 );
 app.use(express.json({ limit: "15mb" }));
 
-// Correct path for Render + your folder structure
-app.use(express.static(path.join(__dirname, "..", "dist")));
+// Serve static files with proper MIME types
+app.use(express.static(path.join(__dirname, "..", "dist"), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    } else if (path.endsWith('.mjs')) {
+      res.setHeader('Content-Type', 'application/javascript');
+    }
+  }
+}));
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "dist", "index.html"));
