@@ -51,6 +51,15 @@ app.use(
 );
 app.use(express.json({ limit: "15mb" }));
 
+// Logging middleware to see all incoming requests
+app.use((req, res, next) => {
+  console.log(`\n🔵 ${req.method} ${req.path}`);
+  if (req.method !== 'GET') {
+    console.log(`   Content-Type: ${req.headers['content-type']}`);
+  }
+  next();
+});
+
 // Serve static files with explicit MIME types
 const staticPath = path.join(__dirname, "..", "dist");
 console.log(`📁 Serving static files from: ${staticPath}`);
@@ -318,10 +327,16 @@ app.post("/api/internships/applications", async (req, res) => {
 });
 
 app.post("/api/mock-interviews", async (req, res) => {
+  console.log("📝 [REQUEST] POST /api/mock-interviews");
+  console.log("📊 Request body:", JSON.stringify(req.body, null, 2));
+
   try {
     const { name, email, mobile, stack, experience, resume } = req.body;
 
+    console.log("✓ Parsed fields:", { name, email, mobile, stack, experience, hasResume: !!resume });
+
     if (!name || !email || !mobile || !stack || !experience) {
+      console.error("❌ Missing required fields:", { name, email, mobile, stack, experience });
       return res.status(400).json({ success: false, message: "All fields are required." });
     }
 
