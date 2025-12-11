@@ -14,6 +14,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const distPath = path.resolve(__dirname, "..", "dist");
 
+// Verify dist folder exists
+if (!fs.existsSync(distPath)) {
+  console.error(`❌ ERROR: dist folder not found at ${distPath}`);
+  console.error("Please run: npm run build");
+  process.exit(1);
+}
+
 const {
   PORT = 5000,
   MONGODB_URI,
@@ -44,19 +51,41 @@ app.use(
 );
 app.use(express.json({ limit: "15mb" }));
 
-// Serve static files with proper MIME types
-app.use(express.static(path.join(__dirname, "..", "dist"), {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.js')) {
-      res.setHeader('Content-Type', 'application/javascript');
-    } else if (path.endsWith('.mjs')) {
-      res.setHeader('Content-Type', 'application/javascript');
-    }
-  }
-}));
+// Middleware to set proper MIME types for all files
+app.use((req, res, next) => {
+  const ext = path.extname(req.path).toLowerCase();
 
+  // Set MIME type based on file extension
+  if (ext === '.js' || ext === '.mjs') {
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  } else if (ext === '.css') {
+    res.setHeader('Content-Type', 'text/css; charset=utf-8');
+  } else if (ext === '.json') {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  } else if (ext === '.svg') {
+    res.setHeader('Content-Type', 'image/svg+xml');
+  } else if (ext === '.wasm') {
+    res.setHeader('Content-Type', 'application/wasm');
+  }
+
+  next();
+});
+
+// Serve static files
+const staticPath = path.join(__dirname, "..", "dist");
+console.log(`📁 Serving static files from: ${staticPath}`);
+app.use(express.static(staticPath));
+
+// Catch-all route for SPA - serve index.html for all routes
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "dist", "index.html"));
+  const indexPath = path.join(__dirname, "..", "dist", "index.html");
+
+  if (!fs.existsSync(indexPath)) {
+    return res.status(404).send(`index.html not found at ${indexPath}`);
+  }
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.sendFile(indexPath);
 });
 
 
@@ -358,32 +387,8 @@ app.use((error, _req, res, _next) => {
   res.status(500).json({ success: false, message: "Internal server error" });
 });
 
-// Serve frontend build if present (production) BEFORE 404
-if (fs.existsSync(distPath)) {
-  // Static assets
-  app.use(express.static(distPath));
-  // SPA fallback for non-API routes
-  app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api")) return next();
-    res.sendFile(path.join(distPath, "index.html"));
-  });
-}
-
-// 404 handler (keep after SPA fallback)
-app.use((req, res) => {
-  res.status(404).json({ success: false, message: "Route not found" });
-});
-
 app.listen(PORT, () => {
-  console.log(`🚀 API server ready on http://localhost:${PORT}`);
+  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`📁 Static files served from: ${distPath}`);
 });
-
-// Frontend serving configured above (removed duplicate)
-// if (fs.existsSync(distPath)) {
-//   app.use(express.static(distPath));
-//   app.get("*", (req, res, next) => {
-//     if (req.path.startsWith("/api")) return next();
-//     res.sendFile(path.join(distPath, "index.html"));
-//   });
-// }
 
