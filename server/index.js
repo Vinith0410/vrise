@@ -130,22 +130,37 @@ const sendEmail = async ({ to, subject, html, attachments = [] }) => {
     return;
   }
 
-  return transporter.sendMail({
-    from: EMAIL_FROM,
-    to,
-    subject,
-    html,
-    attachments,
-  });
+  try {
+    const result = await transporter.sendMail({
+      from: EMAIL_FROM,
+      to,
+      subject,
+      html,
+      attachments,
+    });
+    console.log(`✅ Email sent successfully to ${to}:`, result.messageId);
+    return result;
+  } catch (error) {
+    console.error(`❌ ERROR sending email to ${to}:`, {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      stack: error.stack,
+    });
+    throw error;
+  }
 };
 
 const sendAcknowledgementEmails = async ({ userEmail, subject, message, attachments = [] }) => {
   // Return a boolean indicating whether emails were actually sent
   if (!EMAIL_ENABLED || !transporter) {
-    // Email disabled in env
+    console.log("[email:disabled] would send acknowledgement emails");
     return false;
   }
   try {
+    console.log(`📧 Sending acknowledgement emails for: ${userEmail}`);
+
     await sendEmail({
       to: userEmail,
       subject,
@@ -159,10 +174,17 @@ const sendAcknowledgementEmails = async ({ userEmail, subject, message, attachme
       attachments,
     });
 
+    console.log(`✅ All acknowledgement emails sent successfully`);
     return true;
   } catch (err) {
-    console.warn("Email sending failed:", err);
-    return false; // Do not throw to avoid breaking API responses
+    console.error(`❌ Email sending failed:`, {
+      userEmail,
+      notifyEmail: NOTIFY_EMAIL,
+      error: err.message,
+      code: err.code,
+      details: err,
+    });
+    return false;
   }
 };
 
