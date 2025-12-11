@@ -55,32 +55,27 @@ app.use(express.json({ limit: "15mb" }));
 const staticPath = path.join(__dirname, "..", "dist");
 console.log(`📁 Serving static files from: ${staticPath}`);
 
-// IMPORTANT: Set MIME types in middleware BEFORE express.static
-app.use((req, res, next) => {
-  // Force MIME type headers - this ensures they're never overridden
-  const ext = path.extname(req.path).toLowerCase();
-
-  if (ext === '.js' || ext === '.mjs') {
-    res.set('Content-Type', 'application/javascript; charset=utf-8');
-  } else if (ext === '.css') {
-    res.set('Content-Type', 'text/css; charset=utf-8');
-  } else if (ext === '.json') {
-    res.set('Content-Type', 'application/json; charset=utf-8');
-  } else if (ext === '.wasm') {
-    res.set('Content-Type', 'application/wasm');
-  } else if (ext === '.svg') {
-    res.set('Content-Type', 'image/svg+xml');
-  }
-
-  next();
-});
-
-// Serve static files with cache control
+// Serve static files FIRST with proper MIME types
 app.use(express.static(staticPath, {
   maxAge: '1d',
   etag: false,
   setHeaders: (res, filepath) => {
     const ext = path.extname(filepath).toLowerCase();
+
+    // Set MIME types
+    if (ext === '.js' || ext === '.mjs') {
+      res.set('Content-Type', 'application/javascript; charset=utf-8');
+    } else if (ext === '.css') {
+      res.set('Content-Type', 'text/css; charset=utf-8');
+    } else if (ext === '.json') {
+      res.set('Content-Type', 'application/json; charset=utf-8');
+    } else if (ext === '.wasm') {
+      res.set('Content-Type', 'application/wasm');
+    } else if (ext === '.svg') {
+      res.set('Content-Type', 'image/svg+xml');
+    } else if (ext === '.html') {
+      res.set('Content-Type', 'text/html; charset=utf-8');
+    }
 
     // Cache headers
     if (filepath.includes('/assets/')) {
@@ -91,7 +86,7 @@ app.use(express.static(staticPath, {
   }
 }));
 
-// Catch-all route for SPA - serve index.html for all routes
+// Catch-all route for SPA - serve index.html for all OTHER routes (not static files)
 app.get("*", (req, res) => {
   const indexPath = path.join(__dirname, "..", "dist", "index.html");
 
