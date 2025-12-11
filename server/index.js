@@ -95,18 +95,7 @@ app.use(express.static(staticPath, {
   }
 }));
 
-// Catch-all route for SPA - serve index.html for all OTHER routes (not static files)
-app.get("*", (req, res) => {
-  const indexPath = path.join(__dirname, "..", "dist", "index.html");
-
-  if (!fs.existsSync(indexPath)) {
-    return res.status(404).send(`index.html not found at ${indexPath}`);
-  }
-
-  res.set('Content-Type', 'text/html; charset=utf-8');
-  res.sendFile(indexPath);
-});
-
+// API routes will go here
 
 mongoose
   .connect(MONGODB_URI, { autoIndex: true })
@@ -431,6 +420,18 @@ app.post("/api/feedback", async (req, res) => {
     console.error("Feedback error:", error);
     res.status(500).json({ success: false, message: "Failed to save feedback." });
   }
+});
+
+// Catch-all route for SPA - serve index.html for all OTHER routes (not static files or API)
+app.get("*", (req, res) => {
+  const indexPath = path.join(__dirname, "..", "dist", "index.html");
+
+  if (!fs.existsSync(indexPath)) {
+    return res.status(404).send(`index.html not found at ${indexPath}`);
+  }
+
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  res.sendFile(indexPath);
 });
 
 app.use((req, res) => {
