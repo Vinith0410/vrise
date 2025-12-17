@@ -53,21 +53,21 @@ const Home = () => {
       description: "Stories from learners who completed our structured internship journeys.",
       testimonials: [
         {
-          name: "Priya Sharma",
-          role: "Full Stack Intern",
-          content: "The internship program was incredibly valuable. I gained practical skills and confidence to start my career in web development.",
-          rating: 5,
-        },
-        {
-          name: "Sneha Patel",
-          role: "UI/UX Intern",
-          content: "Outstanding mentorship and real project experience. The team is supportive and the learning environment is excellent.",
-          rating: 5,
-        },
-        {
-          name: "Manoj Desai",
+          name: "Kanishka",
           role: "Data Analytics Intern",
-          content: "Weekly reviews and mini projects pushed me to apply concepts faster than any classroom session.",
+          content: "I learned how to handle data effectively and create pivot tables independently. I also created bar charts using both Excel and Power BI. The guidance provided was excellent and helped me build strong practical skills.",
+          rating: 5,
+        },
+        {
+          name: "Darshini",
+          role: "UI/UX Intern",
+          content: "I gained solid UI/UX knowledge and learned to design professional interfaces using Figma. The guidance from the Vrise team gave me confidence and helped me think like a designer. I’m truly grateful for their support.",
+          rating: 5,
+        },
+        {
+          name: "Haritha",
+          role: "Full Stack Intern",
+          content: "I built a full-stack application from development to deployment during my internship. The application is live and shareable, which makes me feel incredibly proud. Achieving this in such a short time was an amazing experience. Thank you to the Vrise team for their excellent guidance and support.",
           rating: 5,
         },
       ],
@@ -77,21 +77,21 @@ const Home = () => {
       description: "Professionals who improved their interview performance with our ₹49 sessions.",
       testimonials: [
         {
-          name: "Rahul Kumar",
+          name: "Rahul",
           role: "Mock Interview Participant",
-          content: "The mock interview service helped me identify my weaknesses. The feedback was detailed and actionable. Worth every rupee!",
+          content: "The mock interview felt like a real interview. My mistakes were clearly identified, and I received proper guidance and solutions to improve. It was a very helpful and confidence-boosting experience.",
           rating: 5,
         },
         {
-          name: "Nikhil Verma",
+          name: "Rajesh",
           role: "Data Analyst Aspirant",
-          content: "Detailed review and follow-up resources made me confident for my next panel. Scheduling was super smooth.",
+          content: "The data analysis mock interview felt real and well structured. I got clear feedback, useful tips, and guidance that was completely worth the money. It really boosted my confidence.",
           rating: 5,
         },
         {
-          name: "Harini Iyer",
-          role: "Frontend Developer",
-          content: "The interviewer simulated real pressure and still made space for coaching. I left with a clear action plan.",
+          name: "Priya",
+          role: "Full-Stack Developer",
+          content: "The full-stack mock interview felt like a real interview. They clearly pointed out my mistakes and explained how to fix them. The guidance was completely worth the money—honestly, it feels like they could charge more for this level of support. It was an awesome experience.",
           rating: 5,
         },
       ],
@@ -101,15 +101,15 @@ const Home = () => {
       description: "Product owners who trusted us with application builds and support.",
       testimonials: [
         {
-          name: "Ananya Rao",
-          role: "Product Manager, HealthTech",
-          content: "V Rise built our appointment platform ahead of schedule and kept communication transparent throughout.",
+          name: "Murugesan",
+          role: "Murugesan Auditing",
+          content: "File handling in our auditor office was difficult earlier, but this application made it simple and efficient. It works smoothly, is reasonably priced, and comes with good support. We are very satisfied.",
           rating: 5,
         },
         {
-          name: "Karthik Menon",
-          role: "Founder, FinEdge",
-          content: "They treated our MVP like their own product. Clean code, fast iterations, and proactive suggestions.",
+          name: "Arun",
+          role: "Elite System",
+          content: "The Elite System billing software made our billing process fast and simple. It works smoothly, is easy to use, and is reasonably priced. Excellent support and a very satisfying experience.",
           rating: 5,
         },
       ],
@@ -133,7 +133,7 @@ const Home = () => {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${heroImage})` }}
         />
@@ -248,7 +248,7 @@ const Home = () => {
                     <Award className="w-8 h-8 text-primary" />
                   </div>
                   <div>
-                    <h4 className="text-2xl font-bold">500+</h4>
+                    <h4 className="text-2xl font-bold">10+</h4>
                     <p className="text-muted-foreground">Students Trained</p>
                   </div>
                 </div>
@@ -266,7 +266,7 @@ const Home = () => {
                     <Briefcase className="w-8 h-8 text-primary" />
                   </div>
                   <div>
-                    <h4 className="text-2xl font-bold">100+</h4>
+                    <h4 className="text-2xl font-bold">10+</h4>
                     <p className="text-muted-foreground">Projects Delivered</p>
                   </div>
                 </div>
@@ -280,7 +280,7 @@ const Home = () => {
       <section className="py-20 px-4 bg-muted">
         <div className="container mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4">What Our Students Say</h2>
+            <h2 className="text-4xl font-bold mb-4">What People Say About Us</h2>
             <p className="text-xl text-muted-foreground">
               Real feedback from interns, mock interview candidates, and clients
             </p>

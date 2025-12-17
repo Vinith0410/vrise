@@ -128,7 +128,7 @@ const Internships = () => {
     "Full Stack Development",
     "Frontend Development",
     "Backend Development",
-    "Data Analysis",
+    "Data Analytics",
     "Power BI",
     "UI/UX Design",
     "Java Development",
@@ -192,7 +192,7 @@ const Internships = () => {
       modules: ["Microservice patterns", "Database scaling workshop"],
     },
     {
-      name: "Data Analysis",
+      name: "Data Analytics",
       badge: "Analytics Lab",
       duration: "10-day internship",
       trainingHours: "20+ hours of live training",
